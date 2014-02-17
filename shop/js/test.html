@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>无标题文档</title>
+</head>
+
+<body>
+<textarea id="text" style="width:200px;height:300px;">2013.11.11 | 0.7 | 电子
+
+1 * ipad ： 2399.00
+1 * 显示器： 1799.00
+12 * 啤酒 ： 25.00
+5 * 面包 ：9.00
+
+2013.11.11
+2014.3.2 1000 200</textarea>
+<Br />
+<input type="button" value="calculate" id="calculate" />
+<Br />
+<a href="javascript:void 0" id="test1">testCase 1</a>
+<a href="javascript:void 0" id="test2">testCase 2</a>
+
+
+<script>
+(function(){
+	var calculator = new function(){
+		var 
+			cateList = {
+				'电子':['ipad','iphone','显示器','笔记本电脑','键盘'],
+				'视频':['面包','饼干','蛋糕','牛肉','鱼','蔬菜'],
+				'日用品':['餐巾纸','收纳箱','咖啡杯','雨伞'],
+				'酒类':['啤酒','白酒','伏特加']
+			};
+		
+		function trim(s){
+			return s.replace(/^\s*|\s*$/ig, '');
+		}
+		function time(s){
+			return new Date(s).getTime();
+		}
+		function int(i){
+			return parseInt(i, 10);
+		}
+		function getItemCate(name){
+			for(var cate in cateList){
+				var i = cateList[cate].length;
+				while(i--){
+					if(name == cateList[cate][i]){
+						return cate;
+					}
+				}
+			}
+		}
+		function calculate(inputString){
+			var	
+				discountList = {},
+				itemList = [],
+				orderTime = 0,
+				couponList = [],
+				allPrice = 0;
+			//split all lines
+			var lines = trim(inputString).split(/\n/ig);
+			for(var i =0, l=lines.length, mode = 0; i<l;i++){
+				var line = trim(lines[i]);
+				if(line == ''){
+					mode++;
+					continue;
+				}
+				//has no discount
+				if(mode == 0 && line.search(/\*/)>-1){
+					mode = 1;
+				}
+				switch(mode){
+					case 0:
+						//discount
+						var arr = line.split(/\s+\|\s+/ig);
+						discountList[trim(arr[2])] = {
+							time : time(arr[0]),
+							discount : parseFloat(arr[1])
+						};
+					break;
+					case 1://items
+						var part1 = line.split(/\*/ig),
+							part2 = part1[1].split(/[\:\：]/ig),
+							name  = trim(part2[0]),
+							price = parseFloat(trim(part2[1]));
+						itemList.push({
+							num : int(trim(part1[0])),
+							name : name,
+							price : price
+						});
+					break;
+					case 2://ordertime
+						orderTime = time(line);
+						//unset expire discount
+						var newDiscountList = {};
+						for(var cate in discountList){
+							if(discountList[cate].time >= orderTime){
+								newDiscountList[cate] = discountList[cate];
+							}
+						}
+						discountList = newDiscountList;
+						
+						mode++;
+					break;
+					case 3://coupon
+						var arr = line.replace(/\s+/ig, ' ').split(/\s/ig);
+						couponList.push({
+							expire : time(arr[0]),
+							minPrice : parseFloat(arr[1]),
+							discountPrice : parseFloat(arr[2])
+						});
+					break;
+				}
+			}
+			for(var i=0,j=itemList.length;i<j;i++){
+				var currentCate = getItemCate(itemList[i].name),
+					currentPrice = itemList[i].price * itemList[i].num;
+				if(currentCate && typeof discountList[currentCate] != 'undefined'){
+					currentPrice *= discountList[currentCate].discount;
+				}
+				allPrice += currentPrice;
+			}
+			
+			for(var i=0,j=couponList.length;i<j;i++){
+				if(couponList[i].expire >= orderTime && allPrice >= couponList[i].minPrice){
+					allPrice -= couponList[i].discountPrice;
+				}
+			}
+			return parseFloat(allPrice).toFixed(2);
+		};
+		
+		this['calculate'] = calculate;
+		
+		return this;
+	}
+
+function $(o){
+	return document.getElementById(o);
+}
+
+$('calculate').onclick = function(){
+	alert(calculator.calculate($('text').value));
+}
+
+//test case 1
+$('test1').onclick = function(){
+	$('text').value = '2013.11.11 | 0.7 | 电子\r\n\
+\r\n\
+1 * ipad : 2399.00\r\n\
+1 * 显示器: 1799.00\r\n\
+12 * 啤酒: 25.00\r\n\
+5 * 面包: 9.00\r\n\
+\r\n\
+2013.11.11\r\n\
+2014.3.2 1000 200 ';
+	alert(calculator.calculate($('text').value));
+}
+//test case 2
+$('test2').onclick = function(){
+	$('text').value = '3 * 蔬菜 ：5.98\r\n\
+8 * 餐巾纸 ： 3.20\r\n\
+\r\n\
+2014.01.01';
+	alert(calculator.calculate($('text').value));
+}
+	
+})();
+</script>
+</body>
+</html>
+
